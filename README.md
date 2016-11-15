@@ -15,7 +15,6 @@ The AD9833 uses SPI for communication. The following connections are required:
 | **CLK** | **SCK** | SPI Clock pin
 | **DAT** | **MOSI** | SPI Master Out Slave In data pin
 | **FNC** | User defined | SPI transfer enable (active LOW)
-| | |
 
 ## API Reference
 
