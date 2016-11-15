@@ -7,7 +7,7 @@ This library allows the user to
 
 ## Installation
 
-Download the ZIP file and extract into your **sketchbook/libraries** directory. Exit the Arduino program (if open) and restart it to see the KY-040 library with its sketch examples.
+Download the ZIP file and extract into your **sketchbook/libraries** directory. Exit the Arduino program (if open) and restart it to see the **AD9833** library along with its sketch examples.
 
 The AD9833 uses SPI for communication. The following connections are required:
 
@@ -50,7 +50,7 @@ The AD9833 uses SPI for communication. The following connections are required:
 	// Increment the selected frequency register by freqIncHz
 	void IncrementFrequency ( Registers freqReg, float freqIncHz );
 
-This program uses the Arduino API (**Arduino.h**) and **spi.h**; no other special libraries are required. It has been tested on the Arduino Micro.
+This program uses the Arduino API (**Arduino.h** and **spi.h**); no other special libraries are required. It has been tested on the Arduino Micro.
 
 ## Tests
 
