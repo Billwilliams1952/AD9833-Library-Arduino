@@ -29,10 +29,15 @@ AD9833 :: AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency ) {
 	this->FNCpin = FNCpin;
 	pinMode(FNCpin,OUTPUT);
 	digitalWrite(FNCpin,HIGH);
-	
+
+	/* TODO: The minimum resolution and max frequency are determined by
+	 * by referenceFrequency. We should calculate these values and use
+	 * them during setFrequency
+	 */
 	refFrequency = referenceFrequency;
 	
 	// Setup some defaults
+	sleepEnabled = false;
 	outputEnabled = false;
 	waveForm = SINE_WAVE;
 	frequency0 = frequency1 = 1000;		// 1 KHz sine wave to start
@@ -85,6 +90,8 @@ D0	Reserved. Must be 0.
 
 // Set the frequency and waveform registers in the AD9833.
 void AD9833 :: SetFrequency ( Registers freqReg, float frequency ) {
+	// TODO: calculate resolution and max frequency based on
+	// refFrequency. Use the calculations for sanity checks on numbers.
 	if ( frequency > 12.5e6 )		// Sanity check on frequency
 		frequency = 12.5e6;
 	if ( frequency < 0.1 ) frequency = 0.1;
@@ -96,7 +103,7 @@ void AD9833 :: SetFrequency ( Registers freqReg, float frequency ) {
 			lower14 = (int16_t)(freqWord & 0x3FFF);
 
 	// Which register are we updating?
-	uint16_t reg = freqReg == REG0 ? FREQ0_WRITE : FREQ1_WRITE;
+	uint16_t reg = freqReg == REG0 ? FREQ0_WRITE_REG : FREQ1_WRITE_REG;
 	lower14 |= reg;
 	upper14 |= reg;   
 
@@ -104,21 +111,10 @@ void AD9833 :: SetFrequency ( Registers freqReg, float frequency ) {
 	// I get smoother transistions in frequency since the output
 	// isn't reset.  What am I missing here?
 	// Control write: both LSB and MSB FREQ writes consecutively
-	//if ( outputEnabled )
-		//WriteRegister(0x2000);	// THIS IS A PROBLEM! Back to REG0
-	//else
-		//WriteRegister(0x2100);	// THIS TOO - Back to REG0
+	// The inital value of waveForm already sets the Command up
 	WriteControlRegister();			// Update control register properly
 	WriteRegister(lower14);			// Write lower 14 bits to AD9833
 	WriteRegister(upper14);			// Write upper 14 bits to AD9833
-}
-
-void AD9833 :: SetPhase ( Registers phaseReg, float phase ) {
-	// Individual writes.  Phase is 12 LSB bits
-	// TODO: Convert phase and write it out. What is it's format??
-	if ( phaseReg == REG0 )	phase0 = phase;
-	else phase1 = phase;
-	//WriteRegister(0xC000);	// OK, this is not a Control Write
 }
 
 void AD9833 :: IncrementFrequency ( Registers freqReg, float freqIncHz ) {
@@ -128,10 +124,37 @@ void AD9833 :: IncrementFrequency ( Registers freqReg, float freqIncHz ) {
 	SetFrequency(freqReg,frequency+freqIncHz);
 }
 
+void AD9833 :: SetPhase ( Registers phaseReg, float phaseInDeg ) {
+	// Individual writes.  Phase is 12 LSB bits
+	// The output signal will be phase shifted by 2π/4096 x PHASEREG
+	// Sanity checks on input
+	phaseInDeg = fmod(phaseInDeg,360);
+	if ( phaseInDeg < 0 ) phaseInDeg += 360;
+	
+	// Phase is in float degress ( 0.0 - 360.0 )
+	// Convert to a number 0 to 4096 where 4096 = 0 by masking
+	uint16_t phaseVal = (uint16_t)(BITS_PER_DEG * phaseInDeg) & 0x0FFF;
+	phaseVal |= PHASE_WRITE_CMD;
+	if ( phaseReg == REG0 )	{
+		phase0 = phaseInDeg;
+	}
+	else {
+		phase1 = phaseInDeg;
+		phaseVal |= PHASE1_WRITE_REG;
+	}
+	WriteRegister(phaseVal);	// OK, this is not a Control Write
+}
+
+void AD9833 :: IncrementPhase ( Registers phaseReg, float phaseIncDeg ) {
+	// Add/subtract a value from the current phase programmed in
+	// phaseReg by the amount given
+	float phase = (phaseReg == REG0) ? phase0 : phase1;
+	SetPhase(phaseReg,phase + phaseIncDeg);
+}
+
 void AD9833 :: SetWaveform ( WaveformType waveType ) {
 	// Add error checking?
-	if ( waveType != CURRENT_WAVEFORM )
-		waveForm = waveType;
+	waveForm = waveType;
 	WriteControlRegister();
 }
 
@@ -149,6 +172,11 @@ void AD9833 :: SetOutputSource ( Registers freqReg, Registers phaseReg ) {
 	WriteControlRegister();
 }
 
+void AD9833 :: SleepMode ( bool enable ) {
+	sleepEnabled = enable;
+	WriteControlRegister();	
+}
+
 void AD9833 :: WriteControlRegister ( void ) {
 	/*
 	 * Why is SINE_WAVE a special case?
@@ -160,17 +188,21 @@ void AD9833 :: WriteControlRegister ( void ) {
 	 * Internal clock source is always enabled? Maybe allow a change?
 	*/
 	if ( activeFreq == REG0 )
-		waveForm &= ~FREQ1_REG;
+		waveForm &= ~FREQ1_OUTPUT_REG;
 	else
-		waveForm |= FREQ1_REG;
+		waveForm |= FREQ1_OUTPUT_REG;
 	if ( activePhase == REG0 )
-		waveForm &= ~PHASE1_REG;
+		waveForm &= ~PHASE1_OUTPUT_REG;
 	else
-		waveForm |= PHASE1_REG;
+		waveForm |= PHASE1_OUTPUT_REG;
 	if ( outputEnabled )
 		waveForm &= ~RESET_CMD;
 	else
 		waveForm |= RESET_CMD;
+	if ( sleepEnabled )
+		waveForm |= SLEEP_MODE;
+	else
+		waveForm &= ~SLEEP_MODE;
 	WriteRegister ( waveForm );
 }
 

@@ -28,13 +28,21 @@
 #include <Arduino.h>
 #include <SPI.h>
 
-#define pow2_28		268435456L	// 2^28 used in frequency word calculation
+#define pow2_28				268435456L	// 2^28 used in frequency word calculation
+#define BITS_PER_DEG		11.3777777777778	// 4096 / 360
 
-#define RESET_CMD		0x0100		// Control write, reset enabled
-#define FREQ0_WRITE		0x4000
-#define FREQ1_WRITE		0x8000
-#define PHASE1_REG		0x0400
-#define FREQ1_REG		0x0800
+#define RESET_CMD			0x0100		// Control write, reset enabled
+/*		Sleep mode
+ * D7	1 = internal clock is disabled
+ * D6	1 = put DAC to sleep
+ */
+#define SLEEP_MODE			0x00C0
+#define PHASE_WRITE_CMD		0xC000
+#define PHASE1_WRITE_REG	0x2000
+#define FREQ0_WRITE_REG		0x4000
+#define FREQ1_WRITE_REG		0x8000
+#define PHASE1_OUTPUT_REG	0x0400		// Output is based off REG0/REG1
+#define FREQ1_OUTPUT_REG	0x0800		// ditto
 
 /*
  * Initial settings for the control register for waveform type.
@@ -49,8 +57,7 @@
  * SINE_WAVE.  Why, I don't know.
  */
 typedef enum { SINE_WAVE = 0x2000, TRIANGLE_WAVE = 0x0002,
-			   SQUARE_WAVE = 0x0068, HALF_SQUARE_WAVE = 0x0060,
-			   CURRENT_WAVEFORM = 0 } WaveformType;
+			   SQUARE_WAVE = 0x0068, HALF_SQUARE_WAVE = 0x0060 } WaveformType;
 			   
 typedef enum { REG0, REG1, SAME_AS_REG0 } Registers;
 
@@ -63,40 +70,45 @@ public:
 	// Must be the first command after creating the AD9833 object.
 	void Begin ( void );
 
-	// Reset output
+	// Reset counting registers, output is off
 	void Reset ( void );
 
 	// Update just the frequency in REG0 or REG1
 	void SetFrequency ( Registers freqReg, float frequency );
 
+	// Increment the selected frequency register by freqIncHz
+	void IncrementFrequency ( Registers freqReg, float freqIncHz );
+
 	// Update just the phase in REG0 or REG1
-	void SetPhase ( Registers phaseReg, float phase );
+	void SetPhase ( Registers phaseReg, float phaseInDeg );
+
+	// Increment the selected phase register by phaseIncDeg
+	void IncrementPhase ( Registers phaseReg, float phaseIncDeg );
 
 	// SINE_WAVE, TRIANGLE_WAVE, SQUARE_WAVE, HALF_SQUARE_WAVE,
-	// CURRENT_WAVEFORM
 	void SetWaveform ( WaveformType waveType );
 
 	// Output based on the contents of REG0 or REG1
 	void SetOutputSource ( Registers freqReg, Registers phaseReg = SAME_AS_REG0 );
 
-	// Turn ON / OFF output
+	// Turn ON / OFF output using the RESET command
 	void EnableOutput ( bool enable );
 
-	// TODO:
+	// Enable/disable Sleep mode.  Internal clock and DAC disabled
+	void SleepMode ( bool enable );
+
+	// TODO: Setup everything at once
 	void SetupSignal ( Registers freqReg, float frequency, Registers phaseReg,
 						float phase, WaveformType waveType );
-
-	// Increment the selected frequency register by freqIncHz
-	void IncrementFrequency ( Registers freqReg, float freqIncHz );
 
 private:
 
 	void 			WriteRegister ( int16_t dat );
 	void 			WriteControlRegister ( void );
-	uint16_t		waveForm, phase0, phase1;
-	uint8_t			FNCpin, outputEnabled;
+	uint16_t		waveForm;
+	uint8_t			FNCpin, outputEnabled, sleepEnabled;
 	uint32_t		refFrequency;
-	float			frequency0, frequency1;
+	float			frequency0, frequency1, phase0, phase1;
 	Registers		activeFreq, activePhase;
 };
 
