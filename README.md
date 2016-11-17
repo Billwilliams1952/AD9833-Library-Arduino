@@ -16,6 +16,8 @@ The AD9833 uses SPI for communication. The following connections are required:
 | **CLK** | **SCK** | SPI Clock pin |
 | **DAT** | **MOSI** | SPI Master Out Slave In data pin |
 | **FNC** | User defined | SPI transfer enable (active LOW) |
+| **VCC** | **5V** | Recommend a 10 uF capacitor in parallel with a 0.1 uF capacitor connected between this pin and ground.|
+| **GND** | **GND** | see comment above |
 
 ## API Reference
 
@@ -24,31 +26,36 @@ The AD9833 uses SPI for communication. The following connections are required:
 	// Must be the first command after creating the AD9833 object.
 	void Begin ( void );
 
-	// Reset output
+	// Reset counting registers, output is off
 	void Reset ( void );
 
 	// Update just the frequency in REG0 or REG1
 	void SetFrequency ( Registers freqReg, float frequency );
 
+	// Increment the selected frequency register by freqIncHz
+	void IncrementFrequency ( Registers freqReg, float freqIncHz );
+
 	// Update just the phase in REG0 or REG1
-	void SetPhase ( Registers phaseReg, float phase );
+	void SetPhase ( Registers phaseReg, float phaseInDeg );
+
+	// Increment the selected phase register by phaseIncDeg
+	void IncrementPhase ( Registers phaseReg, float phaseIncDeg );
 
 	// SINE_WAVE, TRIANGLE_WAVE, SQUARE_WAVE, HALF_SQUARE_WAVE,
-	// CURRENT_WAVEFORM
 	void SetWaveform ( WaveformType waveType );
 
 	// Output based on the contents of REG0 or REG1
 	void SetOutputSource ( Registers freqReg, Registers phaseReg = SAME_AS_REG0 );
 
-	// Turn ON / OFF output
+	// Turn ON / OFF output using the RESET command
 	void EnableOutput ( bool enable );
 
-	// TODO:
+	// Enable/disable Sleep mode.  Internal clock and DAC disabled
+	void SleepMode ( bool enable );
+
+	// TODO: Setup everything at once
 	void SetupSignal ( Registers freqReg, float frequency, Registers phaseReg,
 						float phase, WaveformType waveType );
-
-	// Increment the selected frequency register by freqIncHz
-	void IncrementFrequency ( Registers freqReg, float freqIncHz );
 
 This program uses the Arduino API (**Arduino.h** and **spi.h**); no other special libraries are required. It has been tested on the Arduino Micro.
 
