@@ -15,13 +15,12 @@
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details. You should have received a copy of
- * the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- * Library originally added November 13, 2016 by Bill Williams
+ * the GNU General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>.
  *
  * This example code is in the public domain.
  * 
- * Code found at: https://github.com/Billwilliams1952/AD9833-Library-Arduino
+ * Library code found at: https://github.com/Billwilliams1952/AD9833-Library-Arduino
  * 
  */
  
@@ -113,7 +112,8 @@ void IncrementFrequencyTest ( void ) {
     if ( numMsecPerStep == 0 ) numMsecPerStep = 1;
 
     gen.SetOutputSource(REG1);    // Lets use REG1 for this example
-    gen.SetWaveform(SINE_WAVE);
+    gen.SetWaveform(REG1,SINE_WAVE);
+    // We don't care about phase for this test
 
     while ( true ) {
       
@@ -136,10 +136,12 @@ void CycleWaveformsTest ( void ) {
     WaveformType waveType = SINE_WAVE;
     gen.SetFrequency(REG0,10000.0);   // Load values
     gen.SetFrequency(REG1,1000.0);
+    // We don't care about phase for this test
     
     while ( true ) {
 
-        gen.SetWaveform(waveType);
+        gen.SetWaveform(REG1,waveType);
+        gen.SetWaveform(REG0,waveType);
         gen.SetOutputSource(REG1);    // Output 1000 Hz waveform
 
         // Hack to allow I'm alive lamp a chance to blink and give a better
@@ -169,12 +171,15 @@ void CycleWaveformsTest ( void ) {
 
 /*
  * Very fast switching example.
+ * I use the FFT display capability on my scope Rigol DS1054Z.
  */
 void SwitchFrequencyRegisterTest ( void ) {
 
-    gen.SetWaveform(SINE_WAVE);
+    gen.SetWaveform(REG0,SINE_WAVE);
+    gen.SetWaveform(REG1,SINE_WAVE);
     gen.SetFrequency(REG0,50000.0);
     gen.SetFrequency(REG1,10000.0);
+    // We don't care about phase for this test
 
     while ( true ) {
       
@@ -189,15 +194,20 @@ void SwitchFrequencyRegisterTest ( void ) {
 
 /*
  * Phase shift between REG0 and REG1. Use a oscilloscope set to Normal
- * triggering, AC coupling, 500usec per division. This will display
- * about two cycles for eacxh register, plus dead time for the Reset.
+ * triggering, AC coupling, 500usec/div, 100 mV/div. This will display
+ * about two cycles for each register, plus dead time for the Reset.
+ * Use Normal triggering so the display remains even when triggering is 
+ * lost. Can use any waveform for this test. Remember that the square 
+ * wave is about 5v-pp while sine and triangle are about 600 mv-pp
  */
 void PhaseTest ( void ) {
-
-    gen.SetWaveform(SINE_WAVE);
-    gen.SetFrequency(REG0,1000.0);    // 1 KHz sine wave
-    gen.SetPhase(REG0,0.0);
-    gen.SetFrequency(REG1,1000.0);
+  
+    gen.SetWaveform(REG0,TRIANGLE_WAVE);   // Any waveform can work
+    gen.SetFrequency(REG0,1000.0);    // 1 KHz
+    gen.SetPhase(REG0,0.0);           // Phase is 0 for first register
+    gen.SetFrequency(REG1,2000.0);    // 1 Khz
+    gen.SetPhase(REG1,0.0);           // Phase is initially 0
+    gen.SetWaveform(REG1,SINE_WAVE);   // Any waveform can work
 
     bool reverse = true;
 
@@ -210,26 +220,61 @@ void PhaseTest ( void ) {
             else
                 gen.IncrementPhase(REG1,1);
 
-            gen.Reset();    // Force registers to restart counting. Also,
-                            // scope trigger will be assured to be on REG0 phase
-
             YIELD_ON_CHAR
-            gen.SetOutputSource(REG1,REG0);  // Display ~ 2 cycles using REG0 phase 
-            delayMicroseconds(1900);    // This is just a wag to try to get exactly
-                                        // 2 cycles of the waveform. It makes the 
-                                        // phase alignments easier to verify.
+            /*
+             * Display ~ 2 cycles using REG0 phase. If no REG is supplied for phase,
+             * defaults to REG specified for frequency. RESET is removed during this
+             * function call.
+             */
+            gen.SetOutputSource(REG0); 
+            /*
+             * This is just a wag to try to get exactly 2 cycles of the waveform. 
+             * It makes the phase alignments easier to verify.
+             */
+            delayMicroseconds(1900);
+                
             YIELD_ON_CHAR
-            gen.SetOutputSource(REG1,REG1); // Now display ~ 2 cycles using REG1 display
-            delayMicroseconds(1950);        // Wag delay for the 2 cycles
+            
+            /* This also works if you keep using REG1 for frequency
+             * Now display ~ 2 cycles using REG1
+             */
+            gen.SetOutputSource(REG1);
+            delayMicroseconds(1950);
+            /*
+             * Turn off for remaining trace. Reset the registers so triggering occurs 
+             * on the start of REG0 signal. Reset() includes 15 msec delay which is good  
+             * to ensure sweep is completed. 
+             * I tried using EnableOutput(true) then EnableOutput(false) in this
+             * loop but could not get reliable triggering on the scope.
+             * 
+             * The difference between Reset() and EnableOutput(false) is that EnableOutput(false)
+             * keeps the AD9833 in RESET until you specifically remove the RESET using 
+             * EnableOutput(true). However, after a call to Reset(), calls to ANY function 
+             * EXCEPT Set/Increment Phase will also remove the RESET.
+             * 
+             */
+            gen.Reset(); 
 
-            gen.Reset();                // Turn off for remaining trace
-
-            if ( i == 0 || i == 90 || i == 180 || i == 270 )
+            if ( i % 90 == 0  )
                 delay(1000);    // Stop and show phase alignment between REG0 REG1
-            else
-                delay(10);      // Smooth scrolling of the phase
         }
     }
+}
+
+/*
+ * Allow the user to enter a frequency, select a waveform, and select what register
+ * For this test, phase is not tested. Both phase registers are loaded with 0.0
+ */
+void ManualFrequencyTest ( void ) {
+  
+}
+
+/*
+ * Show the requested versus actual programmed values for frequency and phase
+ * Also show resolution, max frequency (based on refFrequency)
+ */
+void RequestedvsProgrammedValues ( void ) {
+  
 }
 
 /* 
