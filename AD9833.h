@@ -109,7 +109,7 @@ public:
 	float GetActualProgrammedFrequency ( Registers reg );
 
 	// TODO Return actual phase programmed in register
-	float GetActualProgrammedPhase ( Registers reg )
+	float GetActualProgrammedPhase ( Registers reg );
 
 	// Return frequency resolution 
 	float GetResolution ( void );

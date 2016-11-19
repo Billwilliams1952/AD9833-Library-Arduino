@@ -261,7 +261,7 @@ float AD9833 :: GetActualProgrammedFrequency ( Registers reg ) {
  * Return actual phase programmed
  */
 float AD9833 :: GetActualProgrammedPhase ( Registers reg ) {
-	return 0.0
+	return 0.0;
 }
 
 /*
