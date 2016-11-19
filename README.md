@@ -70,6 +70,8 @@ This program uses the Arduino API (**Arduino.h** and **spi.h**); no other specia
 
 Use the **AD9833_test_suite** example sketch to verify correct operation. Note that an oscilloscope and / or a spectrum analzer are required to completely verify correct operation.
 
+![alt tag](https://cloud.githubusercontent.com/assets/3778024/20376684/709afda0-ac4e-11e6-9e9f-1d7262f5cfe6.png)
+
 ## License
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
