@@ -56,8 +56,8 @@
  * not need Bit D13 set.  This seems to be true for ALL waveforms except
  * SINE_WAVE.  Why, I don't know.
  */
-typedef enum { SINE_WAVE = 0x2000, TRIANGLE_WAVE = 0x0002,
-			   SQUARE_WAVE = 0x0068, HALF_SQUARE_WAVE = 0x0060 } WaveformType;
+typedef enum { SINE_WAVE = 0x2000, TRIANGLE_WAVE = 0x2002,
+			   SQUARE_WAVE = 0x2068, HALF_SQUARE_WAVE = 0x2060 } WaveformType;
 			   
 typedef enum { REG0, REG1, SAME_AS_REG0 } Registers;
 
@@ -71,6 +71,7 @@ public:
 	void Begin ( void );
 
 	// Reset counting registers, output is off
+	// ANY function call after this removes the RESET condition
 	void Reset ( void );
 
 	// Update just the frequency in REG0 or REG1
@@ -85,17 +86,33 @@ public:
 	// Increment the selected phase register by phaseIncDeg
 	void IncrementPhase ( Registers phaseReg, float phaseIncDeg );
 
+	// Set the output waveform for the selected frequency register
 	// SINE_WAVE, TRIANGLE_WAVE, SQUARE_WAVE, HALF_SQUARE_WAVE,
-	void SetWaveform ( WaveformType waveType );
+	void SetWaveform ( Registers waveFormReg, WaveformType waveType );
 
 	// Output based on the contents of REG0 or REG1
 	void SetOutputSource ( Registers freqReg, Registers phaseReg = SAME_AS_REG0 );
 
-	// Turn ON / OFF output using the RESET command
+	// Turn ON / OFF output using the RESET command.
 	void EnableOutput ( bool enable );
 
 	// Enable/disable Sleep mode.  Internal clock and DAC disabled
 	void SleepMode ( bool enable );
+
+	// TODO:
+	void EnableDAC ( bool enable );
+
+	// TODO
+	void EnableInternalClock ( bool enable );
+
+	// Return actual frequency programmed in register 
+	float GetActualProgrammedFrequency ( Registers reg );
+
+	// TODO Return actual phase programmed in register
+	float GetActualProgrammedPhase ( Registers reg )
+
+	// Return frequency resolution 
+	float GetResolution ( void );
 
 	// TODO: Setup everything at once
 	void SetupSignal ( Registers freqReg, float frequency, Registers phaseReg,
@@ -105,7 +122,7 @@ private:
 
 	void 			WriteRegister ( int16_t dat );
 	void 			WriteControlRegister ( void );
-	uint16_t		waveForm;
+	uint16_t		waveForm0, waveForm1;
 	uint8_t			FNCpin, outputEnabled, sleepEnabled;
 	uint32_t		refFrequency;
 	float			frequency0, frequency1, phase0, phase1;

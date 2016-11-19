@@ -3,7 +3,8 @@
  * 
  * Copyright 2016 Bill Williams <wlwilliams1952@gmail.com, github/BillWilliams1952>
  *
- * TODO: Thanks to *** GET WEBSITE *** for his initial code samples.
+ * Thanks to john@vwlowen.co.uk for his work on the AD9833. His web page
+ * is: http://www.vwlowen.co.uk/arduino/AD9833-waveform-generator/AD9833-waveform-generator.htm
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +25,9 @@
 
 #include "AD9833.h"
 
+/*
+ * Create an AD9833 object
+ */
 AD9833 :: AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency ) {
 	// Pin used to enable SPI communication (active LOW)
 	this->FNCpin = FNCpin;
@@ -39,21 +43,20 @@ AD9833 :: AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency ) {
 	// Setup some defaults
 	sleepEnabled = false;
 	outputEnabled = false;
-	waveForm = SINE_WAVE;
+	waveForm0 = waveForm1 = SINE_WAVE;
 	frequency0 = frequency1 = 1000;		// 1 KHz sine wave to start
 	phase0 = phase1 = 0.0;				// 0 phase
 	activeFreq = REG0; activePhase = REG0;
 }
 
+/*
+ * This MUST be the first command after declaring the AD9833 object
+ * Start SPI and place the AD9833 in the RESET state
+ */
 void AD9833 :: Begin ( void ) {
 	SPI.begin();
 	delay(100);
 	Reset();
-}
-
-void AD9833 :: Reset ( void ) {
-	WriteRegister(RESET_CMD);   // Write '1' to control reg D8.
-	delay(10);					// Is this really needed?
 }
 
 /***********************************************************************
@@ -88,7 +91,26 @@ D1	If D5 = 1, D1 = 0.
 D0	Reserved. Must be 0.
 ***********************************************************************/
 
-// Set the frequency and waveform registers in the AD9833.
+/*
+ * Hold the AD9833 in RESET state until the next command of any type.
+ * Reset = 1 resets internal registers to 0, which corresponds to an
+ * analog output of midscale - digital output at 0.
+ * Reset = 0 disables reset. 
+ * 
+ * The difference between Reset() and EnableOutput(false) is that
+ * EnableOutput(false) keeps the AD9833 in the RESET state until you
+ * specifically remove the RESET state using EnableOutput(true).
+ * With a call to Reset(), ANY subsequent call to ANY function (other
+ * than Reset itself) will also remove the RESET state.
+ */
+void AD9833 :: Reset ( void ) {
+	WriteRegister(RESET_CMD);
+	delay(15);
+}
+
+/*
+ *  Set the specified frequency register with the frequency (in Hz)
+ */
 void AD9833 :: SetFrequency ( Registers freqReg, float frequency ) {
 	// TODO: calculate resolution and max frequency based on
 	// refFrequency. Use the calculations for sanity checks on numbers.
@@ -107,16 +129,18 @@ void AD9833 :: SetFrequency ( Registers freqReg, float frequency ) {
 	lower14 |= reg;
 	upper14 |= reg;   
 
-	// The spec says RESET MUST be enabled? I don't enable it and
-	// I get smoother transistions in frequency since the output
-	// isn't reset.  What am I missing here?
-	// Control write: both LSB and MSB FREQ writes consecutively
-	// The inital value of waveForm already sets the Command up
-	WriteControlRegister();			// Update control register properly
+	// I do not reset the registers during write. It seems to remove
+	// 'glitching' on the outputs.
+	WriteControlRegister();
+	// Control register has already been setup to accept two frequency
+	// writes, one for each 14 bit part of the 28 bit frequency word
 	WriteRegister(lower14);			// Write lower 14 bits to AD9833
 	WriteRegister(upper14);			// Write upper 14 bits to AD9833
 }
 
+/*
+ * Increment the specified frequency register with the frequency (in Hz)
+ */
 void AD9833 :: IncrementFrequency ( Registers freqReg, float freqIncHz ) {
 	// Add/subtract a value from the current frequency programmed in
 	// freqReg by the amount given
@@ -124,6 +148,9 @@ void AD9833 :: IncrementFrequency ( Registers freqReg, float freqIncHz ) {
 	SetFrequency(freqReg,frequency+freqIncHz);
 }
 
+/*
+ *  Set the specified phase register with the phase (in degrees)
+ */
 void AD9833 :: SetPhase ( Registers phaseReg, float phaseInDeg ) {
 	// Individual writes.  Phase is 12 LSB bits
 	// The output signal will be phase shifted by 2π/4096 x PHASEREG
@@ -142,9 +169,12 @@ void AD9833 :: SetPhase ( Registers phaseReg, float phaseInDeg ) {
 		phase1 = phaseInDeg;
 		phaseVal |= PHASE1_WRITE_REG;
 	}
-	WriteRegister(phaseVal);	// OK, this is not a Control Write
+	WriteRegister(phaseVal);
 }
 
+/*
+ * Increment the specified phase register by the phase (in degrees)
+ */
 void AD9833 :: IncrementPhase ( Registers phaseReg, float phaseIncDeg ) {
 	// Add/subtract a value from the current phase programmed in
 	// phaseReg by the amount given
@@ -152,18 +182,33 @@ void AD9833 :: IncrementPhase ( Registers phaseReg, float phaseIncDeg ) {
 	SetPhase(phaseReg,phase + phaseIncDeg);
 }
 
-void AD9833 :: SetWaveform ( WaveformType waveType ) {
-	// Add error checking?
-	waveForm = waveType;
+/*
+ * Set the type of waveform that is output for a frequency register
+ * SINE_WAVE, TRIANGLE_WAVE, SQUARE_WAVE, HALF_SQUARE_WAVE
+ */
+void AD9833 :: SetWaveform (  Registers waveFormReg, WaveformType waveType ) {
+	if ( waveFormReg == REG0 )
+		waveForm0 = waveType;
+	else
+		waveForm1 = waveType;
 	WriteControlRegister();
 }
 
+/*
+ * EnableOutput(false) keeps the AD9833 is RESET state until a call to
+ * EnableOutput(true). See the Reset function description
+ */
 void AD9833 :: EnableOutput ( bool enable ) {
 	// How to implement this? Hold in RESET while enable = false
 	outputEnabled = enable;
 	WriteControlRegister();
 }
 
+/*
+ * Set which frequency and phase register is being used to output the
+ * waveform. If phaseReg is not supplied, it defaults to the same
+ * register as freqReg.
+ */
 void AD9833 :: SetOutputSource ( Registers freqReg, Registers phaseReg ) {
 	// Add more error checking?
 	activeFreq = freqReg;
@@ -172,25 +217,78 @@ void AD9833 :: SetOutputSource ( Registers freqReg, Registers phaseReg ) {
 	WriteControlRegister();
 }
 
+//---------- LOWER LEVEL FUNCTIONS NOT NORMALLY NEEDED -------------
+
+/*
+ * Disable/enable both the internal clock and the DAC. Note that square
+ * wave outputs are avaiable if using an external Reference. ??? IS THIS
+ * TRUE ??
+ */
 void AD9833 :: SleepMode ( bool enable ) {
+	// TODO: Call EnableDAC(enable) and EnableInternalClock(enable)
 	sleepEnabled = enable;
 	WriteControlRegister();	
 }
 
+/*
+ * This enables / disables the DAC. It will override any previous DAC
+ * setting by Waveform type, or via the SleepMode function
+ */
+void AD9833 :: EnableDAC ( bool enable ) {
+	
+}
+
+/*
+ * This enables / disables the internal clock. It will override any 
+ * previous clock setting by the SleepMode function
+ */
+void AD9833 :: EnableInternalClock ( bool enable ) { 
+	
+}
+
+// ------------ STATUS / INFORMATION FUNCTIONS -------------------
+/*
+ * Return actual frequency programmed
+ */
+float AD9833 :: GetActualProgrammedFrequency ( Registers reg ) {
+	float frequency = reg == REG0 ? frequency0 : frequency1;
+	int32_t freqWord = (uint32_t)((frequency * pow2_28) / (float)refFrequency) & 0x0FFFFFFFUL;
+	return (float)freqWord * (float)refFrequency / (float)pow2_28;
+}
+
+/*
+ * TODO
+ * Return actual phase programmed
+ */
+float AD9833 :: GetActualProgrammedPhase ( Registers reg ) {
+	return 0.0
+}
+
+/*
+ * Return frequency resolution
+ */
+float AD9833 :: GetResolution ( void ) {
+	return (float)refFrequency / (float)pow2_28;
+}
+
+// --------------------- PRIVATE FUNCTIONS --------------------------
+
 void AD9833 :: WriteControlRegister ( void ) {
 	/*
-	 * Why is SINE_WAVE a special case?
-	 * SINE_WAVE = 0x2000, TRIANGLE_WAVE = 0x2002, SQUARE_WAVE = 0x2068,
-	 * HALF_SQUARE_WAVE = 0x2060
 	 * Control write, RESET disabled, Set Waveform type, set output reg
-	 * of Frequency to 0 or 1, and Phase 0 or 1
+	 * of Frequency to 0 or 1, and Phase 0 or 1.
 	 * If a square wave, the DAC is turned off.
 	 * Internal clock source is always enabled? Maybe allow a change?
 	*/
-	if ( activeFreq == REG0 )
+	uint16_t waveForm; 
+	if ( activeFreq == REG0 ) {
+		waveForm = waveForm0;
 		waveForm &= ~FREQ1_OUTPUT_REG;
-	else
+	}
+	else {
+		waveForm = waveForm1;
 		waveForm |= FREQ1_OUTPUT_REG;
+	}
 	if ( activePhase == REG0 )
 		waveForm &= ~PHASE1_OUTPUT_REG;
 	else
@@ -203,6 +301,7 @@ void AD9833 :: WriteControlRegister ( void ) {
 		waveForm |= SLEEP_MODE;
 	else
 		waveForm &= ~SLEEP_MODE;
+	// TODO: Now check EnableDAC flag and EnableInternalClock bit
 	WriteRegister ( waveForm );
 }
 
