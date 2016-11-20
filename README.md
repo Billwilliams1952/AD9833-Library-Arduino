@@ -81,7 +81,7 @@ This program uses the Arduino API (**Arduino.h** and **spi.h**); no other specia
 
 Use the **AD9833_test_suite** example sketch to verify correct operation. Note that an oscilloscope and / or a spectrum analzer are required to completely verify correct operation.
 
-![alt tag](https://cloud.githubusercontent.com/assets/3778024/20376684/709afda0-ac4e-11e6-9e9f-1d7262f5cfe6.png)
+![alt tag](https://cloud.githubusercontent.com/assets/3778024/20465143/4108022e-af1c-11e6-96e9-26b73d52e730.png)
 
 ## License
 
