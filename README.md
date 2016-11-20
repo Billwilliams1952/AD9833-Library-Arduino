@@ -56,16 +56,16 @@ The AD9833 uses SPI for communication. The following connections are required:
 	// Enable/disable Sleep mode.  Internal clock and DAC disabled
 	void SleepMode ( bool enable );
 
-	// TODO:
+	// Enable / Disable DAC
 	void EnableDAC ( bool enable );
 
-	// TODO
+	// Enable / Disable Internal Clock
 	void EnableInternalClock ( bool enable );
 
 	// Return actual frequency programmed in register 
 	float GetActualProgrammedFrequency ( Registers reg );
 
-	// TODO Return actual phase programmed in register
+	// Return actual phase programmed in register
 	float GetActualProgrammedPhase ( Registers reg );
 
 	// Return frequency resolution 
