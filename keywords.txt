@@ -13,9 +13,9 @@ AD9833	KEYWORD1
 #######################################
 Begin	KEYWORD2
 Reset	KEYWORD2
+ApplySignal	KEYWORD2
 SetFrequency	KEYWORD2
 SetPhase	KEYWORD2
-SetupSignal	KEYWORD2
 IncrementFrequency	KEYWORD2
 IncrementPhase	KEYWORD2
 SetOutputSource	KEYWORD2

@@ -31,15 +31,18 @@
 #define pow2_28				268435456L	// 2^28 used in frequency word calculation
 #define BITS_PER_DEG		11.3777777777778	// 4096 / 360
 
-#define RESET_CMD			0x0100		// Control write, reset enabled
+#define RESET_CMD			0x0100		// Reset enabled (also CMD RESET)
 /*		Sleep mode
  * D7	1 = internal clock is disabled
  * D6	1 = put DAC to sleep
  */
-#define SLEEP_MODE			0x00C0
-#define PHASE_WRITE_CMD		0xC000
-#define PHASE1_WRITE_REG	0x2000
-#define FREQ0_WRITE_REG		0x4000
+#define SLEEP_MODE			0x00C0		// Both DAC and Internal Clock
+#define DISABLE_DAC			0x0040
+#define	DISABLE_INT_CLK		0x0080
+
+#define PHASE_WRITE_CMD		0xC000		// Setup for Phase write
+#define PHASE1_WRITE_REG	0x2000		// Which phase register
+#define FREQ0_WRITE_REG		0x4000		// 
 #define FREQ1_WRITE_REG		0x8000
 #define PHASE1_OUTPUT_REG	0x0400		// Output is based off REG0/REG1
 #define FREQ1_OUTPUT_REG	0x0800		// ditto
@@ -70,8 +73,18 @@ public:
 	// Must be the first command after creating the AD9833 object.
 	void Begin ( void );
 
-	// Reset counting registers, output is off
-	// ANY function call after this removes the RESET condition
+	// Setup and apply a signal. Note that any calls to EnableOut,
+	// SleepMode, DisableDAC, or DisableInternalClock remain in effect
+	void ApplySignal ( WaveformType waveType, Registers freqReg,
+		float frequencyInHz,
+		Registers phaseReg = SAME_AS_REG0, float phaseInDeg = 0.0 );
+
+	// The difference between Reset() and EnableOutput(false) is that
+	// EnableOutput(false) keeps the AD9833 in the RESET state until you
+	// specifically remove the RESET state using EnableOutput(true).
+	// With a call to Reset(), ANY subsequent call to ANY function (other
+	// than Reset itself and Set/IncrementPhase) will also remove the
+	// RESET state.
 	void Reset ( void );
 
 	// Update just the frequency in REG0 or REG1
@@ -99,31 +112,28 @@ public:
 	// Enable/disable Sleep mode.  Internal clock and DAC disabled
 	void SleepMode ( bool enable );
 
-	// TODO:
-	void EnableDAC ( bool enable );
+	// Enable / Disable DAC
+	void DisableDAC ( bool enable );
 
-	// TODO
-	void EnableInternalClock ( bool enable );
+	// Enable / Disable Internal Clock
+	void DisableInternalClock ( bool enable );
 
 	// Return actual frequency programmed in register 
 	float GetActualProgrammedFrequency ( Registers reg );
 
-	// TODO Return actual phase programmed in register
+	// Return actual phase programmed in register
 	float GetActualProgrammedPhase ( Registers reg );
 
 	// Return frequency resolution 
 	float GetResolution ( void );
-
-	// TODO: Setup everything at once
-	void SetupSignal ( Registers freqReg, float frequency, Registers phaseReg,
-						float phase, WaveformType waveType );
 
 private:
 
 	void 			WriteRegister ( int16_t dat );
 	void 			WriteControlRegister ( void );
 	uint16_t		waveForm0, waveForm1;
-	uint8_t			FNCpin, outputEnabled, sleepEnabled;
+	uint8_t			FNCpin, outputEnabled, sleepEnabled, DacDisabled,
+					IntClkDisabled;
 	uint32_t		refFrequency;
 	float			frequency0, frequency1, phase0, phase1;
 	Registers		activeFreq, activePhase;
