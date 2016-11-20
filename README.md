@@ -27,9 +27,18 @@ The AD9833 uses SPI for communication. The following connections are required:
 	// Must be the first command after creating the AD9833 object.
 	void Begin ( void );
 
-	// Reset counting registers, output is off
-	// ANY function call after this removes the RESET condition
+	// The difference between Reset() and EnableOutput(false) is that
+	// EnableOutput(false) keeps the AD9833 in the RESET state until you
+	// specifically remove the RESET state using EnableOutput(true).
+	// With a call to Reset(), ANY subsequent call to ANY function (other
+	// than Reset itself and Set/IncrementPhase) will also remove the
+	// RESET state.
 	void Reset ( void );
+	
+	// Setup and apply a signal. Note that any calls to EnableOut,
+	// SleepMode, DisableDAC, or DisableInternalClock remain in effect
+	void ApplySignal ( WaveformType waveType, Registers freqReg, float frequencyInHz,
+			Registers phaseReg = SAME_AS_REG0, float phaseInDeg = 0.0  );
 
 	// Update just the frequency in REG0 or REG1
 	void SetFrequency ( Registers freqReg, float frequency );
@@ -70,10 +79,6 @@ The AD9833 uses SPI for communication. The following connections are required:
 
 	// Return frequency resolution 
 	float GetResolution ( void );
-
-	// TODO: Setup everything at once
-	void SetupSignal ( Registers freqReg, float frequency, Registers phaseReg,
-						float phase, WaveformType waveType );
 
 This program uses the Arduino API (**Arduino.h** and **spi.h**); no other special libraries are required. It has been tested on the Arduino Micro.
 
