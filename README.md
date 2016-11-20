@@ -83,6 +83,8 @@ Use the **AD9833_test_suite** example sketch to verify correct operation. Note t
 
 ![alt tag](https://cloud.githubusercontent.com/assets/3778024/20465143/4108022e-af1c-11e6-96e9-26b73d52e730.png)
 
+![alt tag](https://cloud.githubusercontent.com/assets/3778024/20465125/011e6694-af1c-11e6-8f17-655415a0de87.png)
+
 ## License
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
