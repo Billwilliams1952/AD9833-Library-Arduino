@@ -1,5 +1,5 @@
 /*
- * AD9833Test.ino
+ * AD9833_test_suite.ino
  * 2016 WLWilliams
  * 
  * This sketch demonstrates the use of the AD9833 DDS module library.
@@ -7,7 +7,7 @@
  * If you don't have an oscilloscope or spectrum analyzer, I don't quite know how you will
  * verify correct operation for some of the functions.
  * TODO: Add tests where the Arduino itself vereifies AD9833 basic operation.  Frequency of
- * square wave, sinve/triangular wave using the A/D inputs.
+ * square wave, sine/triangular wave using the A/D inputs (would need a level shifter).
  * 
  * This program is free software: you can redistribute it and/or modify it under 
  * the terms of the GNU General Public License as published by the Free Software Foundation,
@@ -23,18 +23,16 @@
  * Library code found at: https://github.com/Billwilliams1952/AD9833-Library-Arduino
  * 
  */
- 
-#include <AD9833.h>          
+
+
+#include <AD9833.h>        
 
 #define RUNNING       F("\tRUNNING")
 #define NOT_RUNNING   F("")
 #define ON            F("ON")
 #define OFF           F("OFF")
-#define LED_PIN       13      // I'm alive blinker
-
-// Note, SCK and MOSI must be connected to CLK and DAT pins on the AD9833 for SPI
-#define FNCpin        A5      // Any digital pin. Used to enable SPI transfers (active LOW)
-
+#define LED_PIN       13      // I'm alive blinker  
+#define FNC_PIN       4       // Any digital pin. Used to enable SPI transfers (active LO  
 
 // Some macros to 'improve' readability
 #define BLINK_LED         digitalWrite(LED_PIN,millis()%1000 > 500);
@@ -57,12 +55,15 @@
 #define FLUSH_SERIAL_INPUT  if ( serialEventRun ) serialEventRun(); \
                             do { Serial.read(); delay(100); } while ( Serial.available() > 0 );
 
-                     
+//--------------- Create an AD9833 object ---------------- 
+// Note, SCK and MOSI must be connected to CLK and DAT pins on the AD9833 for SPI
 // -----      AD9833 ( FNCpin, referenceFrequency = 25000000UL )
-AD9833 gen(FNCpin);       // Defaults to 25MHz internal reference frequency
+AD9833 gen(FNC_PIN);       // Defaults to 25MHz internal reference frequency
 
 void setup() { 
     pinMode(LED_PIN,OUTPUT);
+    pinMode(CLOCK_OUTPUT,OUTPUT);
+    digitalWrite(CLOCK_OUTPUT,LOW);
 
     Serial.begin(9600);
     delay(5000);              // Time to open Serial Window to see initial menu
@@ -120,7 +121,7 @@ void loop() {
  */
 void IncrementFrequencyTest ( void ) {
 
-    float startHz = 1000, stopHz = 50000, incHz = 100, sweepTimeSec = 5.0;
+    float startHz = 1000, stopHz = 5000, incHz = 1, sweepTimeSec = 5.0;
  
     // Calculate the delay between each increment.
     uint16_t numMsecPerStep = (sweepTimeSec * 1000.0) / ((uint16_t)((stopHz - startHz) / incHz) + 1);
@@ -185,22 +186,26 @@ void CycleWaveformsTest ( void ) {
 }
 
 /*
- * Very fast switching example.
- * I use the FFT display capability on my scope Rigol DS1054Z.
+ * Fast switching example.
+ * I use the FFT display capability on my scope
  */
 void SwitchFrequencyRegisterTest ( void ) {
 
-    gen.ApplySignal(SINE_WAVE,REG0,50000);
-    gen.ApplySignal(SINE_WAVE,REG1,10000);
+    gen.ApplySignal(SINE_WAVE,REG0,500000);
+    gen.ApplySignal(SINE_WAVE,REG1,100000);
+    gen.SetPhase(REG1,180);           // Offset second freq by 180 deg
+    gen.Reset();
 
-    while ( true ) {
-      
-        YIELD_ON_CHAR
+    while ( true ) {                  // This takes time
         
-        gen.SetOutputSource(REG1);
-        delayMicroseconds(500);
-        gen.SetOutputSource(REG0);
-        delayMicroseconds(500);        
+        YIELD_ON_CHAR                 // This takes more time
+
+        gen.SetOutputSource(REG0);    // This takes about 18 usec
+        gen.SetOutputSource(REG1);    // This takes about 18 usec  
+        
+        // What ends up is REG0 frequency is active a shorter amount of time
+        // then REG1 frequency. In the sepctrum, the duty cycle differences will
+        // show up (power is lower by 10log(DC))
     }  
 }
 
@@ -277,7 +282,7 @@ void PhaseTest ( void ) {
 void RequestedvsProgrammedValues ( void ) {
   
     float requestedFrequency, programmedFrequency;
-    char  buffer[20];   // 14 characters actually needed for display
+    char  buffer[20];   // 14 characters actually needed for display    
 
     gen.ApplySignal(SINE_WAVE,REG0,1000.0);
     
@@ -289,6 +294,7 @@ void RequestedvsProgrammedValues ( void ) {
         while ( !Serial.available() )   BLINK_LED
 
         if ( toupper(Serial.peek()) == 'Q' ) {
+            // Need an extra <CR> ?
             FLUSH_SERIAL_INPUT    // why isn't this flushing input?
             return;
         }
@@ -331,5 +337,6 @@ void PrintMenu ( char ch, bool outputOn ) {
     }
     Serial.println(F("Enter a number 1 to 6 >"));
 }
+
 
 
