@@ -28,6 +28,16 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+//#define FNC_PIN 4			// Define FNC_PIN for fast digital writes
+
+#ifdef FNC_PIN
+	// Use digitalWriteFast for a speedup
+	#include "digitalWriteFast.h"
+	#define WRITE_FNCPIN(Val) digitalWriteFast2(FNC_PIN,(Val))
+#else  // otherwise, just use digitalWrite
+	#define WRITE_FNCPIN(Val) digitalWrite(FNCpin,(Val))
+#endif
+
 #define pow2_28				268435456L	// 2^28 used in frequency word calculation
 #define BITS_PER_DEG		11.3777777777778	// 4096 / 360
 
@@ -47,20 +57,8 @@
 #define PHASE1_OUTPUT_REG	0x0400		// Output is based off REG0/REG1
 #define FREQ1_OUTPUT_REG	0x0800		// ditto
 
-/*
- * Initial settings for the control register for waveform type.
- * Control write (D15 D14 = 00)
- * 		Output using FREQ0 for frequency and PHASE0 for phase
- * 		Reset disabled
- * 		DAC output active (SINE/TRIANGLE)/in sleep (SQUARE) based on waveform
- * 		Internal clock enabled.
- * 		Either a SINE, TRIANGLE, SQUARE, or HALF_SQUARE waveform
- * There seems to be a bug here.  I would assume that a control write does
- * not need Bit D13 set.  This seems to be true for ALL waveforms except
- * SINE_WAVE.  Why, I don't know.
- */
 typedef enum { SINE_WAVE = 0x2000, TRIANGLE_WAVE = 0x2002,
-			   SQUARE_WAVE = 0x2068, HALF_SQUARE_WAVE = 0x2060 } WaveformType;
+			   SQUARE_WAVE = 0x2028, HALF_SQUARE_WAVE = 0x2020 } WaveformType;
 			   
 typedef enum { REG0, REG1, SAME_AS_REG0 } Registers;
 
@@ -79,12 +77,8 @@ public:
 		float frequencyInHz,
 		Registers phaseReg = SAME_AS_REG0, float phaseInDeg = 0.0 );
 
-	// The difference between Reset() and EnableOutput(false) is that
-	// EnableOutput(false) keeps the AD9833 in the RESET state until you
-	// specifically remove the RESET state using EnableOutput(true).
-	// With a call to Reset(), ANY subsequent call to ANY function (other
-	// than Reset itself and Set/IncrementPhase) will also remove the
-	// RESET state.
+	// Resets internal registers to 0, which corresponds to an output of
+	// midscale - digital output at 0. See EnableOutput function
 	void Reset ( void );
 
 	// Update just the frequency in REG0 or REG1
@@ -132,8 +126,10 @@ private:
 	void 			WriteRegister ( int16_t dat );
 	void 			WriteControlRegister ( void );
 	uint16_t		waveForm0, waveForm1;
-	uint8_t			FNCpin, outputEnabled, sleepEnabled, DacDisabled,
-					IntClkDisabled;
+#ifndef FNC_PIN
+	uint8_t			FNCpin;
+#endif
+	uint8_t			outputEnabled, DacDisabled, IntClkDisabled;
 	uint32_t		refFrequency;
 	float			frequency0, frequency1, phase0, phase1;
 	Registers		activeFreq, activePhase;

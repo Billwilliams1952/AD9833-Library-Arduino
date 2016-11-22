@@ -30,9 +30,13 @@
  */
 AD9833 :: AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency ) {
 	// Pin used to enable SPI communication (active LOW)
+#ifdef FNC_PIN
+	pinMode(FNC_PIN,OUTPUT);
+#else
 	this->FNCpin = FNCpin;
 	pinMode(FNCpin,OUTPUT);
-	digitalWrite(FNCpin,HIGH);
+#endif
+	WRITE_FNCPIN(HIGH);
 
 	/* TODO: The minimum resolution and max frequency are determined by
 	 * by referenceFrequency. We should calculate these values and use
@@ -43,7 +47,6 @@ AD9833 :: AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency ) {
 	refFrequency = referenceFrequency;
 	
 	// Setup some defaults
-	sleepEnabled = false;
 	DacDisabled = false;
 	IntClkDisabled = false;
 	outputEnabled = false;
@@ -64,8 +67,10 @@ void AD9833 :: Begin ( void ) {
 }
 
 /*
- * Setup and apply a signal. Note that any calls to EnableOut,
- * SleepMode, DisableDAC, or DisableInternalClock remain in effect
+ * Setup and apply a signal. phaseInDeg defaults to 0.0 if not supplied.
+ * phaseReg defaults to value of freqReg if not supplied.
+ * Note that any previous calls to EnableOut,
+ * SleepMode, DisableDAC, or DisableInternalClock remain in effect.
  */
 void AD9833 :: ApplySignal ( WaveformType waveType,
 		Registers freqReg, float frequencyInHz,
@@ -109,10 +114,9 @@ D0	Reserved. Must be 0.
 ***********************************************************************/
 
 /*
- * Hold the AD9833 in RESET state until the next command of any type.
- * Reset = 1 resets internal registers to 0, which corresponds to an
- * analog output of midscale - digital output at 0.
- * Reset = 0 disables reset. 
+ * Hold the AD9833 in RESET state.
+ * Resets internal registers to 0, which corresponds to an output of
+ * midscale - digital output at 0.
  * 
  * The difference between Reset() and EnableOutput(false) is that
  * EnableOutput(false) keeps the AD9833 in the RESET state until you
@@ -220,7 +224,7 @@ void AD9833 :: SetWaveform (  Registers waveFormReg, WaveformType waveType ) {
 
 /*
  * EnableOutput(false) keeps the AD9833 is RESET state until a call to
- * EnableOutput(true). See the Reset function description
+ * EnableOutput(true). See the Reset function description.
  */
 void AD9833 :: EnableOutput ( bool enable ) {
 	outputEnabled = enable;
@@ -248,7 +252,8 @@ void AD9833 :: SetOutputSource ( Registers freqReg, Registers phaseReg ) {
  * TODO: ?? IS THIS TRUE ??
  */
 void AD9833 :: SleepMode ( bool enable ) {
-	sleepEnabled = enable;
+	DacDisabled = enable;
+	IntClkDisabled = enable;
 	WriteControlRegister();
 }
 
@@ -303,7 +308,10 @@ float AD9833 :: GetResolution ( void ) {
  */
 void AD9833 :: WriteControlRegister ( void ) {
 	uint16_t waveForm;
-	
+	// TODO: can speed things up by keeping a writeReg0 and writeReg1
+	// that presets all bits during the various setup function calls
+	// rather than setting flags. Then we could just call WriteRegister
+	// directly.
 	if ( activeFreq == REG0 ) {
 		waveForm = waveForm0;
 		waveForm &= ~FREQ1_OUTPUT_REG;
@@ -320,10 +328,6 @@ void AD9833 :: WriteControlRegister ( void ) {
 		waveForm &= ~RESET_CMD;
 	else
 		waveForm |= RESET_CMD;
-	if ( sleepEnabled )
-		waveForm |= SLEEP_MODE;
-	else
-		waveForm &= ~SLEEP_MODE;
 	if ( DacDisabled )
 		waveForm |= DISABLE_DAC;
 	else
@@ -341,13 +345,20 @@ void AD9833 :: WriteRegister ( int16_t dat ) {
 	 * We set the mode here, because other hardware may be doing SPI also
 	 */
 	SPI.setDataMode(SPI_MODE2);
-  
-	digitalWrite(FNCpin, LOW);		// FNCpin low to write to AD9833
-	delayMicroseconds(10);			// delay a bit - is this too much?
-  
+
+	/* Improve overall switching speed
+	 * Note, the times are for this function call, not the write.
+	 * digitalWrite(FNCpin)			~ 17.6 usec
+	 * digitalWriteFast2(FNC_PIN)	~  8.8 usec
+	 */
+	WRITE_FNCPIN(LOW);		// FNCpin low to write to AD9833
+
+	//delayMicroseconds(2);	// Some delay may be needed
+
+	// TODO: Are we running at the highest clock rate?
 	SPI.transfer(highByte(dat));	// Transmit 16 bits 8 bits at a time
 	SPI.transfer(lowByte(dat));
 
-	digitalWrite(FNCpin, HIGH);		// Write done.
+	WRITE_FNCPIN(HIGH);		// Write done
 }
 
