@@ -6,6 +6,14 @@ Library to control the AD9833 DDS waveform generator. The library allows the use
 **From Analog Devices data sheet:** (http://www.analog.com/media/en/technical-documentation/data-sheets/AD9833.pdf)
 >"The AD9833 is a low power, programmable waveform generator capable of producing sine, triangular, and square wave outputs. Waveform generation is required in various types of sensing, actuation, and time domain reflectometry (TDR) applications. The output frequency and phase are software programmable, allowing easy tuning. No external components are needed. The frequency registers are 28 bits wide: with a 25 MHz clock rate, resolution of 0.1 Hz can be achieved; with a 1 MHz clock rate, the AD9833 can be tuned to 0.004 Hz resolution. The AD9833 is written to via a 3-wire serial interface. This serial interface operates at clock rates up to 40 MHz and is compatible with DSP and microcontroller standards. The device operates with a power supply from 2.3 V to 5.5 V."
 
+## Updates
+
+| Version | Date | Description |
+| :--------- | :---------- | :---------------------------------------- |
+| - | - | Initial Release |
+|   |   |                 |
+
+
 ## Installation
 
 Download the ZIP file and extract into your **sketchbook/libraries** directory. Exit the Arduino program (if open) and restart it to see the **AD9833** library along with its sketch examples.
