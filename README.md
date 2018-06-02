@@ -11,7 +11,7 @@ Library to control the AD9833 DDS waveform generator. The library allows the use
 | Version | Date | Description |
 | :--------- | :---------- | :---------------------------------------- |
 | - | - | Initial Release |
-|   |   |                 |
+|   | 6/2/2018 |  Added simple ApplySignal.ino file to examples directory               |
 
 
 ## Installation
