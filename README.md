@@ -29,65 +29,65 @@ The AD9833 uses SPI for communication. The following connections are required:
 | **GND** | **GND** | see comment above |
 
 ## API Reference
+```C++
+AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency = 25000000UL );
 
-	AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency = 25000000UL );
+// Must be the first command after creating the AD9833 object.
+void Begin ( void );
 
-	// Must be the first command after creating the AD9833 object.
-	void Begin ( void );
-
-	// The difference between Reset() and EnableOutput(false) is that
-	// EnableOutput(false) keeps the AD9833 in the RESET state until you
-	// specifically remove the RESET state using EnableOutput(true).
-	// With a call to Reset(), ANY subsequent call to ANY function (other
-	// than Reset itself and Set/IncrementPhase) will also remove the
-	// RESET state.
-	void Reset ( void );
+// The difference between Reset() and EnableOutput(false) is that
+// EnableOutput(false) keeps the AD9833 in the RESET state until you
+// specifically remove the RESET state using EnableOutput(true).
+// With a call to Reset(), ANY subsequent call to ANY function (other
+// than Reset itself and Set/IncrementPhase) will also remove the
+// RESET state.
+void Reset ( void );
 	
-	// Setup and apply a signal. Note that any calls to EnableOut,
-	// SleepMode, DisableDAC, or DisableInternalClock remain in effect
-	void ApplySignal ( WaveformType waveType, Registers freqReg, float frequencyInHz,
-			Registers phaseReg = SAME_AS_REG0, float phaseInDeg = 0.0  );
+// Setup and apply a signal. Note that any calls to EnableOut,
+// SleepMode, DisableDAC, or DisableInternalClock remain in effect
+void ApplySignal ( WaveformType waveType, Registers freqReg, float frequencyInHz,
+		Registers phaseReg = SAME_AS_REG0, float phaseInDeg = 0.0  );
 
-	// Update just the frequency in REG0 or REG1
-	void SetFrequency ( Registers freqReg, float frequency );
+// Update just the frequency in REG0 or REG1
+void SetFrequency ( Registers freqReg, float frequency );
 
-	// Increment the selected frequency register by freqIncHz
-	void IncrementFrequency ( Registers freqReg, float freqIncHz );
+// Increment the selected frequency register by freqIncHz
+void IncrementFrequency ( Registers freqReg, float freqIncHz );
 
-	// Update just the phase in REG0 or REG1
-	void SetPhase ( Registers phaseReg, float phaseInDeg );
+// Update just the phase in REG0 or REG1
+void SetPhase ( Registers phaseReg, float phaseInDeg );
 
-	// Increment the selected phase register by phaseIncDeg
-	void IncrementPhase ( Registers phaseReg, float phaseIncDeg );
+// Increment the selected phase register by phaseIncDeg
+void IncrementPhase ( Registers phaseReg, float phaseIncDeg );
 
-	// Set the output waveform for the selected frequency register
-	// SINE_WAVE, TRIANGLE_WAVE, SQUARE_WAVE, HALF_SQUARE_WAVE,
-	void SetWaveform ( Registers waveFormReg, WaveformType waveType );
+// Set the output waveform for the selected frequency register
+// SINE_WAVE, TRIANGLE_WAVE, SQUARE_WAVE, HALF_SQUARE_WAVE,
+void SetWaveform ( Registers waveFormReg, WaveformType waveType );
 
-	// Output based on the contents of REG0 or REG1
-	void SetOutputSource ( Registers freqReg, Registers phaseReg = SAME_AS_REG0 );
+// Output based on the contents of REG0 or REG1
+void SetOutputSource ( Registers freqReg, Registers phaseReg = SAME_AS_REG0 );
 
-	// Turn ON / OFF output using the RESET command.
-	void EnableOutput ( bool enable );
+// Turn ON / OFF output using the RESET command.
+void EnableOutput ( bool enable );
 
-	// Enable/disable Sleep mode.  Internal clock and DAC disabled
-	void SleepMode ( bool enable );
+// Enable/disable Sleep mode.  Internal clock and DAC disabled
+void SleepMode ( bool enable );
 
-	// Enable / Disable DAC
-	void EnableDAC ( bool enable );
+// Enable / Disable DAC
+void EnableDAC ( bool enable );
 
-	// Enable / Disable Internal Clock
-	void EnableInternalClock ( bool enable );
+// Enable / Disable Internal Clock
+void EnableInternalClock ( bool enable );
 
-	// Return actual frequency programmed in register 
-	float GetActualProgrammedFrequency ( Registers reg );
+// Return actual frequency programmed in register 
+float GetActualProgrammedFrequency ( Registers reg );
 
-	// Return actual phase programmed in register
-	float GetActualProgrammedPhase ( Registers reg );
+// Return actual phase programmed in register
+float GetActualProgrammedPhase ( Registers reg );
 
-	// Return frequency resolution 
-	float GetResolution ( void );
-
+// Return frequency resolution 
+float GetResolution ( void );
+```
 This program uses the Arduino API (**Arduino.h** and **spi.h**); no other special libraries are required. It has been tested on the Arduino Micro.
 
 ## Tests
