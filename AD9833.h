@@ -71,8 +71,10 @@ public:
 	AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency = 25000000UL );
 
 	// Must be the first command after creating the AD9833 object.
-	void Begin ( void );
-
+	// Must be the first command after creating the AD9833 object.
+    // if nothing is given (i.e. NULL) default SPI is used
+	void Begin (SPIClass *spiBus = NULL);
+    
 	// Setup and apply a signal. Note that any calls to EnableOut,
 	// SleepMode, DisableDAC, or DisableInternalClock remain in effect
 	void ApplySignal ( WaveformType waveType, Registers freqReg,
@@ -135,6 +137,7 @@ private:
 	uint32_t		refFrequency;
 	float			frequency0, frequency1, phase0, phase1;
 	Registers		activeFreq, activePhase;
+    SPIClass		*_spiBus;
 };
 
 #endif
