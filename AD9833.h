@@ -66,7 +66,7 @@ class AD9833 {
 
 public:
 	
-	AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency = 4000000UL );
+	AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency = 25000000UL );
 
 	// Must be the first command after creating the AD9833 object.
 	void Begin ( void );
