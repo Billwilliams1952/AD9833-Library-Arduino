@@ -1,25 +1,27 @@
 /*
  * AD9833.h
- * 
+ *
  * Copyright 2016 Bill Williams <wlwilliams1952@gmail.com, github/BillWilliams1952>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
- * 
+ *
+ *
  */
+
+// update
 
 #ifndef __AD9833__
 
@@ -52,25 +54,27 @@
 
 #define PHASE_WRITE_CMD		0xC000		// Setup for Phase write
 #define PHASE1_WRITE_REG	0x2000		// Which phase register
-#define FREQ0_WRITE_REG		0x4000		// 
+#define FREQ0_WRITE_REG		0x4000		//
 #define FREQ1_WRITE_REG		0x8000
 #define PHASE1_OUTPUT_REG	0x0400		// Output is based off REG0/REG1
 #define FREQ1_OUTPUT_REG	0x0800		// ditto
 
 typedef enum { SINE_WAVE = 0x2000, TRIANGLE_WAVE = 0x2002,
 			   SQUARE_WAVE = 0x2028, HALF_SQUARE_WAVE = 0x2020 } WaveformType;
-			   
+
 typedef enum { REG0, REG1, SAME_AS_REG0 } Registers;
 
 class AD9833 {
 
 public:
-	
+
 	AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency = 25000000UL );
 
 	// Must be the first command after creating the AD9833 object.
-	void Begin ( void );
-
+	// Must be the first command after creating the AD9833 object.
+    // if nothing is given (i.e. NULL) default SPI is used
+	void Begin (SPIClass *spiBus = NULL);
+    
 	// Setup and apply a signal. Note that any calls to EnableOut,
 	// SleepMode, DisableDAC, or DisableInternalClock remain in effect
 	void ApplySignal ( WaveformType waveType, Registers freqReg,
@@ -112,13 +116,13 @@ public:
 	// Enable / Disable Internal Clock
 	void DisableInternalClock ( bool enable );
 
-	// Return actual frequency programmed in register 
+	// Return actual frequency programmed in register
 	float GetActualProgrammedFrequency ( Registers reg );
 
 	// Return actual phase programmed in register
 	float GetActualProgrammedPhase ( Registers reg );
 
-	// Return frequency resolution 
+	// Return frequency resolution
 	float GetResolution ( void );
 
 private:
@@ -133,7 +137,7 @@ private:
 	uint32_t		refFrequency;
 	float			frequency0, frequency1, phase0, phase1;
 	Registers		activeFreq, activePhase;
+    SPIClass		*_spiBus;
 };
 
 #endif
-

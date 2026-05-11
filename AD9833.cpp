@@ -60,8 +60,15 @@ AD9833 :: AD9833 ( uint8_t FNCpin, uint32_t referenceFrequency ) {
  * This MUST be the first command after declaring the AD9833 object
  * Start SPI and place the AD9833 in the RESET state
  */
-void AD9833 :: Begin ( void ) {
-	SPI.begin();
+void AD9833 :: Begin (SPIClass* spiBus ) {
+
+    if ( spiBus == NULL) {
+        this->_spiBus = &SPI; 
+        _spiBus->begin();
+    } else {
+        this->_spiBus = spiBus;
+        // no begin, assumed SPI is stared outside
+    }
 	delay(100);
 	Reset();	// Hold in RESET until first WriteRegister command
 }
@@ -344,7 +351,10 @@ void AD9833 :: WriteRegister ( int16_t dat ) {
 	/*
 	 * We set the mode here, because other hardware may be doing SPI also
 	 */
-	SPI.setDataMode(SPI_MODE2);
+    const SPISettings settings{200000, MSBFIRST, SPI_MODE2};
+    _spiBus->beginTransaction(settings);
+	// Old:
+    //SPI.setDataMode(SPI_MODE2);
 
 	/* Improve overall switching speed
 	 * Note, the times are for this function call, not the write.
@@ -356,9 +366,11 @@ void AD9833 :: WriteRegister ( int16_t dat ) {
 	//delayMicroseconds(2);	// Some delay may be needed
 
 	// TODO: Are we running at the highest clock rate?
-	SPI.transfer(highByte(dat));	// Transmit 16 bits 8 bits at a time
-	SPI.transfer(lowByte(dat));
+	_spiBus->transfer(highByte(dat));	// Transmit 16 bits 8 bits at a time
+	_spiBus->transfer(lowByte(dat));
 
 	WRITE_FNCPIN(HIGH);		// Write done
+   _spiBus->endTransaction() ;
+   
 }
 
